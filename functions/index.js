@@ -25,9 +25,7 @@ app.post("/sendPhishingEmails", async (req, res) => {
     const sendEmailPromises = emails.map(async (email, index) => {
       const userId = `user_${index}`; // Generate a userId (in real use, you'd probably have this)
 
-      const phishingLink = `http://localhost:${
-        process.env.PORT || 3060
-      }/landing?utm_campaign=${templateId}&user_id=${userId}`;
+      const phishingLink = `https://app-gp6swyu7ma-uc.a.run.app/landing?utm_campaign=${templateId}&user_id=${userId}`;
 
       // Send phishing email
       await sendEmails([email], phishingLink, subject, emailTemplate);
