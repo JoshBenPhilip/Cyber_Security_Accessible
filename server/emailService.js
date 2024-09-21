@@ -1,24 +1,23 @@
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 
-// Create transporter object for SMTP
+// Configure SMTP transport for sending emails
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: true, // Use SSL (for port 465)
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // true for port 465, false for port 587
   auth: {
-    user: process.env.SMTP_USER, // Your email address
-    pass: process.env.SMTP_PASS, // Your email password or app password
+    user: process.env.SMTP_USER, // Your Gmail address
+    pass: process.env.SMTP_PASS, // Your Gmail app password
   },
 });
 
-// Function to send phishing email
 async function sendEmail(toEmail, phishingLink) {
   const mailOptions = {
-    from: process.env.SMTP_USER, // Sender address
-    to: toEmail, // List of recipients
-    subject: "Phishing Test", // Subject line
-    html: `<p>This is a phishing test. Click the link: <a href="${phishingLink}">Verify your account</a></p>`, // HTML body
+    from: process.env.SMTP_USER,
+    to: toEmail,
+    subject: "Get your $500 today",
+    html: `<p>Get your $500 today! Click the link and fill out account details to redeem: <a href="${phishingLink}">Get my money!</a></p>`,
   };
 
   try {

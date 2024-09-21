@@ -8,6 +8,8 @@
   </head>
   <body>
     <h1>Phishing Campaign Dashboard</h1>
+
+    <!-- Updated form to include category selection -->
     <form id="phishing-form">
       <input type="email" id="email" placeholder="Enter user email" required />
       <input
@@ -17,9 +19,46 @@
         required
       />
       <input type="text" id="userId" placeholder="Enter user ID" required />
+
+      <!-- Select category -->
+      <select id="category">
+        <option value="basic">Basic Phishing</option>
+        <option value="medium">Medium Targeting</option>
+        <option value="spear phishing">Spear Phishing</option>
+      </select>
+
       <button type="submit">Send Phishing Email</button>
     </form>
 
-    <script type="module" src="script.js"></script>
+    <script>
+      // Handle form submission and send POST request
+      document
+        .getElementById("phishing-form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const email = document.getElementById("email").value;
+          const templateId = document.getElementById("templateId").value;
+          const userId = document.getElementById("userId").value;
+          const category = document.getElementById("category").value;
+
+          try {
+            const response = await fetch("/sendPhishingEmail", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, templateId, userId, category }),
+            });
+
+            if (response.ok) {
+              const result = await response.text();
+              alert(result); // Show alert with server response
+            } else {
+              throw new Error("Failed to send phishing email");
+            }
+          } catch (error) {
+            alert("Error: " + error.message);
+          }
+        });
+    </script>
   </body>
 </html>

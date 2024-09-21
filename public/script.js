@@ -1,11 +1,11 @@
 // Import Firebase directly from the CDN
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import {
   getFirestore,
   doc,
   setDoc,
-} from "https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-analytics.js";
+} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -33,19 +33,23 @@ document
     const templateId = document.getElementById("templateId").value;
     const userId = document.getElementById("userId").value;
 
-    // Send phishing email via backend API
-    const response = await fetch("/sendPhishingEmail", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, templateId, userId }),
-    });
-
-    const result = await response.text();
-    alert(result);
-
-    // Optionally log this data to Firestore
     try {
-      await setDoc(doc(db, "phishing_submissions", userId), {
+      // Send phishing email via backend API
+      const response = await fetch("/sendPhishingEmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, templateId, userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send phishing email");
+      }
+
+      const result = await response.text();
+      alert(result);
+
+      // Optionally log this data to Firestore
+      await setDoc(doc(db, "phishing_submissions", userId + "_" + templateId), {
         email,
         templateId,
         userId,
@@ -53,6 +57,7 @@ document
       });
       console.log("Form submission logged in Firestore!");
     } catch (error) {
-      console.error("Error adding document to Firestore: ", error);
+      console.error("Error:", error);
+      alert("Error: " + error.message);
     }
   });
