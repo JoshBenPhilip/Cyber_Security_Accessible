@@ -12,20 +12,29 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendEmail(toEmail, phishingLink) {
-  const mailOptions = {
-    from: process.env.SMTP_USER,
-    to: toEmail,
-    subject: "Get your $500 today",
-    html: `<p>Get your $500 today! Click the link and fill out account details to redeem: <a href="${phishingLink}">Get my money!</a></p>`,
-  };
+// Function to send emails to multiple recipients
+async function sendEmails(emailList, phishingLink, subject, emailTemplate) {
+  const promises = emailList.map(async (toEmail) => {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: toEmail,
+      subject: subject,
+      html: emailTemplate.replace(
+        "{link}",
+        `<a href="${phishingLink}">Click here</a>`
+      ),
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully");
-  } catch (error) {
-    console.error("Error sending email:", error);
-  }
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log(`Email sent successfully to ${toEmail}`);
+    } catch (error) {
+      console.error(`Error sending email to ${toEmail}:`, error);
+    }
+  });
+
+  // Wait for all emails to be sent before returning
+  return Promise.all(promises);
 }
 
-module.exports = { sendEmail };
+module.exports = { sendEmails };

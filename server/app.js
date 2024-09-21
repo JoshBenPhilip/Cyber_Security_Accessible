@@ -1,7 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const path = require("path");
-const { sendEmail } = require("./emailService"); // Email service
+const { sendEmails } = require("./emailService"); // Updated email service
 const { db } = require("./firebaseConfig"); // Firestore configuration
 const admin = require("firebase-admin"); // Required to use Firestore's FieldValue
 require("dotenv").config();
@@ -9,52 +8,65 @@ require("dotenv").config();
 const app = express();
 app.use(bodyParser.json());
 
-// Serve static files
-app.use(express.static(path.join(__dirname, "../public")));
+// Send phishing emails to multiple addresses
+app.post("/sendPhishingEmails", async (req, res) => {
+  const { emails, templateId, subject, emailTemplate } = req.body;
 
-// Send phishing emails and track data
-app.post("/sendPhishingEmail", async (req, res) => {
-  const { email, templateId, userId, category } = req.body; // include `category`
-  const phishingLink = `http://localhost:${
-    process.env.PORT || 3060
-  }/landing?utm_campaign=${templateId}&user_id=${userId}`;
+  if (!emails || !Array.isArray(emails) || emails.length === 0) {
+    return res
+      .status(400)
+      .send("Email list is required and should not be empty.");
+  }
 
   try {
-    // Send phishing email
-    await sendEmail(email, phishingLink);
+    // Create a promise array to track all emails being sent
+    const sendEmailPromises = emails.map(async (email, index) => {
+      const userId = `user_${index}`; // Generate a userId (in real use, you'd probably have this)
 
-    // Get or create the user document
-    const userRef = db.collection("users").doc(userId);
-    const userDoc = await userRef.get();
+      const phishingLink = `http://localhost:${
+        process.env.PORT || 3060
+      }/landing?utm_campaign=${templateId}&user_id=${userId}`;
 
-    if (!userDoc.exists) {
-      // If user doesn't exist, create a new document
-      await userRef.set({
-        email: email,
-        phishingHistory: [],
-        stats: {
-          basicPhishingCount: 0,
-          mediumPhishingCount: 0,
-          spearPhishingCount: 0,
-          totalPhishingCount: 0,
-        },
+      // Send phishing email
+      await sendEmails([email], phishingLink, subject, emailTemplate);
+
+      // Get or create the user document in Firestore
+      const userRef = db.collection("users").doc(userId);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        // If user doesn't exist, create a new document
+        await userRef.set({
+          email: email,
+          phishingHistory: [],
+          stats: {
+            basicPhishingCount: 0,
+            mediumPhishingCount: 0,
+            spearPhishingCount: 0,
+            totalPhishingCount: 0,
+          },
+        });
+      }
+
+      // Update the user's phishing history
+      await userRef.update({
+        phishingHistory: admin.firestore.FieldValue.arrayUnion({
+          templateId: templateId,
+          category: "phishing", // This can be dynamically set
+          clicked: false,
+          clickedTimestamp: null,
+        }),
       });
-    }
-
-    // Update the user's phishing history
-    await userRef.update({
-      phishingHistory: admin.firestore.FieldValue.arrayUnion({
-        templateId: templateId,
-        category: category,
-        clicked: false,
-        clickedTimestamp: null,
-      }),
     });
 
-    res.status(200).send("Email sent successfully");
+    // Wait for all emails to be sent
+    await Promise.all(sendEmailPromises);
+
+    // Return success after all emails are sent
+    res.status(200).send("All phishing emails sent successfully.");
   } catch (error) {
-    console.error("Error sending email:", error);
-    res.status(500).send("Failed to send email");
+    console.error("Error sending phishing emails:", error);
+    res.status(500).send("Failed to send phishing emails.");
   }
 });
 
@@ -88,17 +100,6 @@ app.get("/landing", async (req, res) => {
 
     // Update stats based on the category
     const stats = userData.stats || {};
-    switch (phishingEntry.category) {
-      case "basic":
-        stats.basicPhishingCount = (stats.basicPhishingCount || 0) + 1;
-        break;
-      case "medium":
-        stats.mediumPhishingCount = (stats.mediumPhishingCount || 0) + 1;
-        break;
-      case "spear phishing":
-        stats.spearPhishingCount = (stats.spearPhishingCount || 0) + 1;
-        break;
-    }
     stats.totalPhishingCount = (stats.totalPhishingCount || 0) + 1;
 
     // Update the Firestore document
