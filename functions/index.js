@@ -5,10 +5,12 @@ const app = express();
 const { sendEmails } = require("./emailService"); // Updated email service
 const { db } = require("./firebaseConfig"); // Firestore configuration
 const { FieldValue } = require("firebase-admin/firestore"); // Required to use Firestore's FieldValue
+const cors = require("cors");
 
 require("dotenv").config();
 
 app.use(bodyParser.json());
+app.use(cors());
 
 // Send phishing emails to multiple addresses
 app.post("/sendPhishingEmails", async (req, res) => {
